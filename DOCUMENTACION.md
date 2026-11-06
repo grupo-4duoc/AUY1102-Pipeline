@@ -275,7 +275,7 @@ Snyk indica que **actualizar a `chokidar@3.0.0` corrige 6 de ellas** (cambio de 
 ### 4.3 SonarCloud
 
 **Qué es:** plataforma de análisis **estático** de código (SAST) que detecta *bugs*, vulnerabilidades,
-*security hotspots*, *code smells* y duplicación, y muestra la cobertura de pruebas.
+*security hotspots*, *code smells* y duplicación, y además puede mostrar la cobertura de pruebas.
 
 **Configuración en el repositorio:** se creó [`sonar-project.properties`](sonar-project.properties):
 
@@ -290,25 +290,49 @@ sonar.javascript.lcov.reportPaths=coverage/lcov.info
 **Pasos realizados:**
 
 1. Ingresar a https://sonarcloud.io con **GitHub**.
-2. La aplicación **SonarQube Cloud** está instalada en la organización de GitHub `grupo-4duoc`
-   (*Organization Settings → GitHub Apps*), con acceso al repositorio `AUY1102-Pipeline`.
-3. En SonarCloud existe la organización **`grupo-4duoc`** vinculada a GitHub.
-4. **Analyze new project →** organización `grupo-4duoc` → seleccionar `AUY1102-Pipeline` → **Set up**.
+2. Verificar que la aplicación **SonarQube Cloud** esté instalada en la organización de GitHub `grupo-4duoc`
+   (*Organization Settings → GitHub Apps*) con acceso al repositorio `AUY1102-Pipeline`.
+3. En SonarCloud, ir a **+ → Analyze new project →** organización `grupo-4duoc`.
+4. Marcar el repositorio **AUY1102-Pipeline** → **Set Up**. El proyecto se crea como público y
+   SonarCloud ejecuta el primer análisis automáticamente (*Automatic Analysis*).
 
-> **Incidencia:** al listar los repositorios, SonarCloud respondió *"The request cannot be processed.
-> Try again later"* en varios intentos. [COMPLETAR: cómo se resolvió (reintento más tarde o creación
-> manual del proyecto + análisis con GitHub Actions y el secreto `SONAR_TOKEN`)].
+> **Incidencia y solución:** al principio SonarCloud respondía *"The request cannot be processed"*
+> al listar los repositorios. La causa era que la cuenta usada no tenía rol **Admin** en la organización
+> de SonarCloud. Al ingresar con la cuenta administradora, el repositorio apareció y se pudo importar.
 
-**Resultados:** [COMPLETAR cuando termine el análisis]
+**Resultados del análisis (rama `master`, código original, 792 líneas de código):**
 
-| Métrica | Valor |
+| Métrica | Resultado |
 |---|---|
-| Quality Gate | [COMPLETAR] |
-| Bugs | [COMPLETAR] |
-| Vulnerabilities | [COMPLETAR] |
-| Security Hotspots | [COMPLETAR] |
-| Code Smells | [COMPLETAR] |
-| Coverage | [COMPLETAR] |
+| Quality Gate | *Not computed*: es el primer análisis y se calcula en el siguiente |
+| Security | **16 problemas abiertos – nota E** |
+| Reliability | 0 problemas – nota A |
+| Maintainability | 1 problema – nota A |
+| Duplicaciones | 0,0 % |
+| Dependency risks | 125 – nota C |
+| Coverage | No configurada (el análisis automático no importa cobertura; requiere análisis por CI con el reporte `coverage/lcov.info`) |
+
+![Resumen del análisis en SonarCloud](img/06a-sonarcloud-resumen.jpg)
+
+**Problemas de seguridad más importantes (severidad *Blocker*):**
+
+| Archivo | Hallazgo de SonarCloud |
+|---|---|
+| `.npmrc` | Token de GitHub en el código: debe revocarse, cambiarse y eliminarse |
+| `credentials.yml` | Token *hard-coded* (2 hallazgos) |
+| `src/quality/insecure-1-object.ts` | *Server-Side Template Injection* (SSTI) por entrada de usuario sin sanitizar |
+
+**Otros hallazgos:**
+- **Dockerfile:** copia recursiva que podría incluir datos sensibles en la imagen (alta), y la imagen `node` se ejecuta como usuario `root` (baja).
+- **Workflows de GitHub Actions:** `npm install` sin `--ignore-scripts` y dependencias sin versiones bloqueadas (media).
+- **`insecure-1-object.ts`:** plantilla formateada dinámicamente (media) y Express revela su versión (baja).
+
+![Problemas de seguridad detectados por SonarCloud](img/06b-sonarcloud-issues-seguridad.jpg)
+
+**Análisis:** SonarCloud confirmó los secretos expuestos y la vulnerabilidad SSTI que se habían
+identificado en la revisión manual (sección 5). Además encontró riesgos que las herramientas de
+dependencias (npm audit, Snyk y Dependabot) no ven, porque están en el **código y la configuración
+propios** del proyecto: el Dockerfile y los workflows de GitHub Actions.
 
 ### 4.4 GitHub Advanced Security
 
