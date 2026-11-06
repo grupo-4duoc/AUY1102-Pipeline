@@ -361,21 +361,143 @@ sonar.javascript.lcov.reportPaths=coverage/lcov.info
 
 | Campo | Detalle |
 |---|---|
-| Herramienta que lo detectó | [COMPLETAR: Snyk / SonarCloud] |
-| Problema | [COMPLETAR] |
-| Archivo / dependencia | [COMPLETAR] |
-| Severidad | [COMPLETAR] |
-| Corrección aplicada | [COMPLETAR] |
-| Commit | [COMPLETAR enlace] |
+| Herramienta que lo detectó | **Snyk** (*Snyk Open Source*), confirmado con `npm audit` y Dependabot |
+| Problema | `chokidar@2.0.3` arrastra dependencias transitivas vulnerables: ReDoS en `decode-uri-component`, consumo descontrolado de recursos y recursión no controlada en `braces` (vía `micromatch`, `anymatch` y `readdirp`) |
+| Archivo / dependencia | `package.json` → `dependencies.chokidar` (dependencia de **producción**) |
+| Severidad | **Alta** (7 *issues* en Snyk, CVSS hasta 8.7) |
+| Corrección aplicada | Actualización de `chokidar` de `^2.0.3` a `^3.6.0` (última versión 3.x) |
+| Commit | `fix(deps): actualizar chokidar a 3.6.0` en la rama [`feature/parcial2-simon`](https://github.com/grupo-4duoc/AUY1102-Pipeline/commits/feature/parcial2-simon) |
 
-![Hallazgo antes de la corrección](img/09a-remediacion-antes.jpg)
+#### Paso 1 – Análisis de impacto
 
-![Hallazgo resuelto](img/09b-remediacion-despues.jpg)
+Antes de actualizar se verificó si el código usa `chokidar`:
 
-**Opciones evaluadas:**
+```bash
+grep -r "chokidar" src test   # sin resultados
+npm ls chokidar
+```
+
+```text
++-- @babel/cli@7.18.10
+| `-- chokidar@3.6.0
++-- chokidar@2.0.3          <- dependencia directa vulnerable
+`-- ts-node-dev@2.0.0
+  `-- chokidar@3.6.0
+```
+
+**Conclusión:** `chokidar` **no se importa en ningún archivo** de `src/` ni `test/`; solo está declarado en
+`package.json`. Además, la versión `3.6.0` ya estaba en el proyecto (la usan `@babel/cli` y `ts-node-dev`).
+Por eso el cambio de versión mayor (2 → 3) tiene **bajo riesgo**.
+
+#### Paso 2 – Evidencia "antes"
+
+```bash
+npm audit --omit=dev > docs/npm-audit-prod-ANTES.txt
+```
+
+```text
+braces  <3.0.3                       Severity: high
+  chokidar  1.3.0 - 2.1.8            (depende de anymatch y braces vulnerables)
+  micromatch  <=4.0.7                (depende de braces vulnerable)
+    anymatch  1.2.0 - 2.0.0
+    readdirp  2.2.0 - 2.2.1
+decode-uri-component  <=0.5.0        Severity: high
+  source-map-resolve  >=0.5.1
+yaml  1.0.0 - 1.10.2                 Severity: moderate
+
+8 vulnerabilities (3 moderate, 5 high)
+```
+
+Reporte completo: [`docs/npm-audit-prod-ANTES.txt`](docs/npm-audit-prod-ANTES.txt)
+
+#### Paso 3 – Corrección
+
+```bash
+npm install chokidar@^3.6.0
+npm ls chokidar
+```
+
+```text
++-- @babel/cli@7.18.10
+| `-- chokidar@3.6.0 deduped
++-- chokidar@3.6.0
+`-- ts-node-dev@2.0.0
+  `-- chokidar@3.6.0 deduped
+```
+
+- `package.json`: `"chokidar": "^2.0.3"` → `"chokidar": "^3.6.0"`.
+- `package-lock.json`: se **eliminaron 134 paquetes** obsoletos que solo existían por `chokidar@2`
+  (`micromatch@3`, `braces@2`, `snapdragon`, `decode-uri-component`, etc.) y **no se agregó ninguno**.
+  Esto reduce la superficie de ataque del proyecto.
+
+#### Paso 4 – Prueba de regresión
+
+```bash
+npm run test:coverage
+```
+
+```text
+==================== 2. PRUEBAS QUE FALLAN ====================
+Suites : 10 OK / 0 con fallos / 10 total
+Pruebas: 18 OK / 0 fallidas / 18 total
+
+✔ Todas las pruebas pasaron.
+...
+  Líneas      :  43.28 %  (29/67)
+  Resultado    : ÉXITO ✔
+```
+
+Las **18 pruebas siguen pasando** y la cobertura no cambió: la actualización no introdujo regresiones.
+
+#### Paso 5 – Evidencia "después"
+
+```bash
+npm audit --omit=dev > docs/npm-audit-prod-DESPUES.txt
+```
+
+```text
+picomatch  <=2.3.1                   Severity: high
+  fix available via `npm audit fix`
+yaml  1.0.0 - 1.10.2                 Severity: moderate
+  fix available via `npm audit fix`
+
+2 vulnerabilities (1 moderate, 1 high)
+```
+
+Reporte completo: [`docs/npm-audit-prod-DESPUES.txt`](docs/npm-audit-prod-DESPUES.txt)
+
+#### Resultado
+
+| Severidad (producción) | Antes | Después |
+|---|---:|---:|
+| Alta | 5 | 1 |
+| Moderada | 3 | 1 |
+| **Total** | **8** | **2** |
+
+| Vulnerabilidad | Antes | Después |
+|---|---|---|
+| `braces` (alta) | ❌ Presente | ✅ Corregida |
+| `micromatch` (alta) | ❌ Presente | ✅ Corregida |
+| `anymatch` (alta) | ❌ Presente | ✅ Corregida |
+| `readdirp` (alta) | ❌ Presente | ✅ Corregida |
+| `decode-uri-component` (alta) | ❌ Presente | ✅ Corregida |
+| `chokidar` (moderada) | ❌ Presente | ✅ Corregida |
+| `source-map-resolve` (moderada) | ❌ Presente | ✅ Corregida |
+| `picomatch` (alta) | – | ⚠️ **Nueva** |
+| `yaml` (moderada) | ❌ Presente | ❌ Pendiente |
+
+**Análisis del resultado:**
+- Se corrigieron **7 de las 8** vulnerabilidades de producción originales.
+- **`picomatch@2.3.1` (nueva):** `chokidar@3` reemplazó a `micromatch`/`braces` por `picomatch`, y esa
+  versión tiene un aviso de *ReDoS* y *method injection*. Esto demuestra por qué **siempre hay que volver
+  a escanear después de una actualización**: corregir una dependencia puede introducir otra. Se corrige
+  con `npm audit fix` (sin cambios incompatibles).
+- **`yaml` (pendiente):** **no estaba relacionada con chokidar**. Viene de `cosmiconfig@6` y también
+  se corrige con `npm audit fix`.
+
+**Otras remediaciones posibles (no aplicadas):**
 - **Secretos en `src/index.ts`:** eliminar `apiKey` y `githubToken` escritos en el código, leerlos
   desde variables de entorno (`process.env`) y quitar la llamada automática a `fetchData()`.
-- **Dependencia `chokidar` (Snyk):** actualizar de `2.0.3` a `3.x`, lo que corrige 6 vulnerabilidades altas.
 - **`credentials.yml`:** se elimina al final, como indicó la docente.
 
 ---
@@ -416,7 +538,9 @@ sonar.javascript.lcov.reportPaths=coverage/lcov.info
 | Archivo | Cambio |
 |---|---|
 | `scripts/run-tests.sh` | Nuevo: script de pruebas, cobertura, fallos y código no cubierto |
-| `package.json` | `test:coverage` ahora ejecuta `bash scripts/run-tests.sh` |
+| `package.json` | `test:coverage` ahora ejecuta `bash scripts/run-tests.sh`; `chokidar` actualizado a `^3.6.0` |
+| `package-lock.json` | Remediación: `chokidar@3.6.0` y eliminación de 134 paquetes obsoletos |
+| `docs/npm-audit-prod-ANTES.txt` / `-DESPUES.txt` | Evidencia de la remediación (npm audit de producción) |
 | `.gitignore` | Se agrega `coverage` |
 | `sonar-project.properties` | Nuevo: configuración de SonarCloud |
 | `docs/npm-audit-report.txt` / `.json` | Nuevo: reporte completo de npm audit |
