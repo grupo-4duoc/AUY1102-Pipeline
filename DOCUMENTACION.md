@@ -704,6 +704,30 @@ navegando el historial del repositorio o con `git log -p -- credentials.yml`. Po
 3. Guardar los secretos en un lugar seguro, como **GitHub Secrets** o un gestor de secretos, y activar
    **Push protection** para bloquear futuros intentos de subir credenciales.
 
+**Buena práctica: manejo correcto de secretos**
+
+Un secreto que se filtró **debe revocarse o rotarse**: borrar el archivo no basta, porque el valor
+queda guardado en el historial de Git. Si la aplicación necesita un token, este **nunca se escribe en
+el código**. Se guarda en *GitHub → Settings → Secrets and variables → Actions* (por ejemplo, con el
+nombre `NPM_TOKEN`) y se usa en los workflows como `${{ secrets.NPM_TOKEN }}`, o como variable de
+entorno en el código (`process.env`). Además, **Push protection** de GitHub puede bloquear un
+`git push` que intente subir un secreto nuevo.
+
+```yaml
+# Workflow: el valor real vive en GitHub Secrets, no en el repositorio
+- run: npm ci
+  env:
+    NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+```ts
+// Código: se lee desde una variable de entorno, no se escribe en el archivo
+const apiKey = process.env.API_KEY;
+```
+
+> Con esto se resolvería también el hallazgo 5.2: en `.npmrc` el token se reemplaza por
+> `//npm.pkg.github.com/:_authToken=${NPM_TOKEN}`.
+
 **Otras remediaciones posibles (no aplicadas):**
 - **Secretos en `src/index.ts`:** eliminar `apiKey` y `githubToken` escritos en el código, leerlos
   desde variables de entorno (`process.env`) y quitar la llamada automática a `fetchData()`.
