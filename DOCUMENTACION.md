@@ -7,8 +7,8 @@
 | Organización GitHub | `grupo-4duoc` |
 | Repositorio | https://github.com/grupo-4duoc/AUY1102-Pipeline |
 | Repositorio base (docente) | https://github.com/Fundacion-Instituto-Profesional-Duoc-UC/AUY1102-Pipeline |
-| Rama de trabajo | `feature/parcial2-simon` |
-| Integrantes | Simón Lagos · NOMBRE PAREJA |
+| Ramas de trabajo | `feature/parcial2-simon` (Simón) · `feature/pruebas-unitarias` (Abraham, integrada con `git merge`) |
+| Integrantes | Abraham Ravelo · Simón Lagos |
 | Fecha | 06-11-2026 |
 
 > Las imágenes están en la carpeta `img/` del repositorio.
@@ -18,6 +18,8 @@
 ## Índice
 
 1. [Contexto](#1-contexto)
+   - 1.1 [Conceptos clave de calidad de software (IE3.1.1)](#11-conceptos-clave-de-calidad-de-software-ie311)
+   - 1.2 [Herramientas de aseguramiento de calidad (IE3.2.1)](#12-herramientas-de-aseguramiento-de-calidad-ie321)
 2. [Preparación del entorno](#2-preparación-del-entorno)
 3. [Parte 1 – Pruebas unitarias y cobertura](#3-parte-1--pruebas-unitarias-y-cobertura)
 4. [Parte 2 – Análisis de seguridad y código estático](#4-parte-2--análisis-de-seguridad-y-código-estático)
@@ -28,6 +30,7 @@
    - 4.5 [Remediación](#45-remediación)
 5. [Hallazgos de seguridad detectados en el código](#5-hallazgos-de-seguridad-detectados-en-el-código)
 6. [Conclusiones](#6-conclusiones)
+7. [Distribución del trabajo](#7-distribución-del-trabajo)
 
 ---
 
@@ -44,6 +47,41 @@ El proyecto es una librería **TypeScript** de *Value Objects* (`StringValueObje
 **¿Por qué importa en el ciclo de vida?** Mientras antes se detecta un error o una vulnerabilidad
 (*shift-left*), más barato es corregirlo. Un bug detectado por una prueba unitaria en un Pull Request
 cuesta minutos; el mismo bug en producción puede costar días y generar incidentes de seguridad.
+
+### 1.1 Conceptos clave de calidad de software (IE3.1.1)
+
+A continuación explicamos los conceptos solicitados en la rúbrica y cómo aportan a la calidad del software:
+
+* **Pruebas unitarias:** revisan que una función, método o clase pequeña funcione bien de forma aislada,
+  sin depender de bases de datos ni servicios externos. Ayudan a encontrar errores de lógica rápido,
+  mientras uno programa. *Ejemplo en este proyecto:* las pruebas de `DateValueObject` (sección 3.4).
+* **Calidad de código estático:** revisar el código **sin ejecutarlo** (con linters como ESLint o
+  herramientas como SonarCloud). Sirve para detectar malas prácticas, código duplicado y posibles fallas
+  antes de compilar. *Ejemplo:* SonarCloud (sección 4.3).
+* **Calidad de código dinámico:** evaluar el software **mientras se ejecuta** (por ejemplo, corriendo
+  las pruebas con Jest). Permite ver el comportamiento real, si fallan funciones o si hay problemas de
+  rendimiento en tiempo de ejecución. *Ejemplo:* `npm run test:coverage` (sección 3).
+* **Análisis de seguridad y vulnerabilidades:** buscar fallas de seguridad en el código propio (como
+  inyecciones SQL o XSS) o en las librerías que usamos (dependencias vulnerables). Sirve para que nadie
+  pueda atacar o botar el sistema. *Ejemplo:* npm audit, Snyk y GitHub Advanced Security (sección 4).
+* **Pruebas integradas:** prueban cómo interactúan dos o más partes del sistema entre sí (por ejemplo,
+  que la API se conecte bien con la base de datos). Aseguran que las partes que funcionan solas también
+  funcionen juntas.
+* **Pruebas de estrés:** exigen al sistema al máximo, con mucho tráfico o muchos datos, para ver en qué
+  punto falla y cómo se recupera.
+* **Pruebas de regresión:** son las pruebas que se vuelven a correr después de un cambio o arreglo para
+  confirmar que lo nuevo no rompió lo que ya funcionaba. *Ejemplo:* volver a correr las pruebas después
+  de actualizar `chokidar` (sección 4.5) y después de integrar la rama de Abraham (sección 3.6).
+
+### 1.2 Herramientas de aseguramiento de calidad (IE3.2.1)
+
+| Herramienta | Para qué sirve | En qué etapa del ciclo de vida se usa | Beneficio principal |
+|---|---|---|---|
+| **Jest** | Framework para ejecutar pruebas unitarias y medir cobertura. | Desarrollo (mientras se programa y antes de subir cambios). | Detecta fallas de lógica al instante, antes de pasar a producción. |
+| **SonarCloud** | Plataforma de análisis estático continuo de calidad y seguridad. | Integración continua (en cada *push* o *Pull Request*). | Muestra la deuda técnica, los *code smells* y si el código pasa el *Quality Gate*. |
+| **Snyk** | Escáner de seguridad para dependencias, contenedores y código fuente. | Desarrollo y CI/CD. | Avisa si usamos librerías viejas con vulnerabilidades y recomienda cómo arreglarlas. |
+| **npm audit** | Comando nativo de npm para revisar vulnerabilidades de paquetes. | Instalación y empaquetado de dependencias. | Rápido y directo en la terminal; permite parchar paquetes con `npm audit fix`. |
+| **GitHub Advanced Security** | Herramientas de seguridad dentro de GitHub (Secret Scanning y Dependabot). | Repositorio y control de versiones. | Avisa (y con *push protection* bloquea) si alguien sube contraseñas o tokens al repositorio. |
 
 ---
 
@@ -81,19 +119,35 @@ npm install
 
 `npm install` instaló **1599 paquetes** y advirtió **82 vulnerabilidades**, que se analizan en la sección 4.1.
 
+3. En paralelo, Abraham trabajó las pruebas unitarias en la rama `feature/pruebas-unitarias` (PR #4).
+   Su trabajo se integró en `feature/parcial2-simon` con un **merge**, sin copiar archivos a mano, para que
+   su commit quede registrado con su autoría:
+
+```bash
+git fetch origin
+git merge --no-ff origin/feature/pruebas-unitarias
+# Conflicto en package.json: se conservaron test:coverage (Simón) y test:report (Abraham)
+```
+
 ---
 
 ## 3. Parte 1 – Pruebas unitarias y cobertura
 
-### 3.1 Conceptos
+> Esta parte se trabajó en dos ramas: **Simón Lagos** creó el script `run-tests.sh` (rama
+> `feature/parcial2-simon`) y **Abraham Ravelo** corrigió el bug de `DateValueObject`, creó sus pruebas
+> y el script `reporte-pruebas.js` (rama `feature/pruebas-unitarias`, PR #4). Ambas ramas se integraron
+> con `git merge`, conservando la autoría de cada commit.
 
-- **Prueba unitaria:** verifica una unidad pequeña de código (una función o un método) de forma aislada.
+### 3.1 Conceptos de cobertura
+
+> Los conceptos generales (prueba unitaria, regresión, etc.) están en la sección [1.1](#11-conceptos-clave-de-calidad-de-software-ie311).
+
 - **Cobertura de código:** porcentaje del código que se ejecuta durante las pruebas. Se mide en
   *sentencias*, *líneas*, *funciones* y *ramas* (cada camino de un `if/else`).
 - Una cobertura baja **no significa que el código falle**, sino que hay partes **sin verificar**, donde
-  un cambio futuro podría romper algo sin que nadie lo note (**riesgo de regresión**).
+  un error puede pasar desapercibido. Eso fue justo lo que pasó con `DateValueObject` (sección 3.4).
 
-### 3.2 Script creado: `scripts/run-tests.sh`
+### 3.2 Script `scripts/run-tests.sh` (Simón Lagos)
 
 Se creó el script [`scripts/run-tests.sh`](scripts/run-tests.sh) y se conectó al comando
 `npm run test:coverage` en `package.json`:
@@ -112,13 +166,11 @@ Se creó el script [`scripts/run-tests.sh`](scripts/run-tests.sh) y se conectó 
 
 Además se agregó `coverage` al `.gitignore`, porque los reportes son archivos generados.
 
-### 3.3 Ejecución
+### 3.3 Ejecución inicial (código original)
 
 ```bash
 npm run test:coverage
 ```
-
-**Salida del script (pruebas que fallan):**
 
 ```text
 ==================== 2. PRUEBAS QUE FALLAN ====================
@@ -126,61 +178,153 @@ Suites : 10 OK / 0 con fallos / 10 total
 Pruebas: 18 OK / 0 fallidas / 18 total
 
 ✔ Todas las pruebas pasaron.
-```
 
-**Salida del script (código no cubierto):**
-
-```text
 ==================== 3. CÓDIGO NO CUBIERTO POR PRUEBAS ====================
-• src/index.ts
-    Líneas sin cubrir   : 8-10
-• src/quality/errores-object.ts
-    Líneas sin cubrir   : 2-3, 6
-• src/quality/insecure-1-object.ts
-    Líneas sin cubrir   : 1-3, 5, 7, 10
-• src/quality/insecure-2-object.ts
-    Líneas sin cubrir   : 1-2, 6-7, 11-12, 18, 22, 24, 30, 32
 • src/value-object/primitives/date-value-object.ts
     Líneas sin cubrir   : 3, 7-9, 13-14, 19, 23-25, 29-30, 34-35
     Ramas (if/else) sin cubrir: 3
 • src/value-object/primitives/enum-value-object.ts
     Líneas sin cubrir   : 11
     Ramas (if/else) sin cubrir: 1
-```
+  (... más los archivos de src/quality/ e index.ts)
 
-**Salida del script (resumen de cobertura):**
-
-```text
 ==================== RESUMEN DE COBERTURA ====================
   Sentencias  :  43.28 %  (29/67)
   Ramas       :     60 %  (6/10)
   Funciones   :  56.66 %  (17/30)
   Líneas      :  43.28 %  (29/67)
+```
+
+Las 18 pruebas pasaban, pero **`DateValueObject` tenía solo 6,66 % de cobertura**: no existía ninguna
+prueba para esa clase.
+
+### 3.4 Bug en `DateValueObject` y pruebas nuevas (Abraham Ravelo)
+
+Al revisar [`src/value-object/primitives/date-value-object.ts`](src/value-object/primitives/date-value-object.ts),
+Abraham encontró que la validación de la fecha (línea 13) tenía la **condición invertida**:
+
+```diff
+   private checkDateIsValue(date: string): void {
+-    if (!Number.isNaN(new Date(date).getTime())) {
++    if (Number.isNaN(new Date(date).getTime())) {
+       this.throwErrorForInvalidDate(date);
+     }
+   }
+```
+
+- **Antes:** con el `!`, el error se lanzaba cuando la fecha **era válida** y se aceptaban fechas inválidas.
+  En la práctica, la clase **no se podía usar** con ninguna fecha correcta.
+- **Después:** solo se lanza error cuando la fecha **no es válida**, que es lo que corresponde.
+
+Las 18 pruebas originales **no detectaron este bug** porque ninguna probaba `DateValueObject`. Es el
+ejemplo perfecto de por qué importa la cobertura.
+
+Para cubrir la clase creó un *mock* y 5 pruebas nuevas:
+
+- [`test/value-object/primitives/DateValueObject/__mocks__/BirthDate.ts`](test/value-object/primitives/DateValueObject/__mocks__/BirthDate.ts):
+  clase concreta `BirthDate` que extiende `DateValueObject` (que es abstracta).
+- [`test/value-object/primitives/DateValueObject/dateValueObject.test.ts`](test/value-object/primitives/DateValueObject/dateValueObject.test.ts):
+
+| Prueba | Qué verifica |
+|---|---|
+| debe crearse correctamente con una fecha valida | Una fecha válida se acepta y se guarda en formato ISO |
+| debe lanzar error cuando se pasa una fecha invalida | `'fecha-falsa'` lanza `Fecha invalida: fecha-falsa` (la prueba del bug) |
+| debe comparar si una fecha es anterior a otra | `isBeforeThisDate()` |
+| debe comparar si una fecha es posterior a otra | `isAfterThisDate()` |
+| debe validar si una fecha esta entre dos fechas | `isBetweenTheDates()` |
+
+### 3.5 Script `scripts/reporte-pruebas.js` (Abraham Ravelo)
+
+Abraham creó un segundo script, en Node.js, conectado al comando `npm run test:report`:
+
+```json
+"test:report": "node scripts/reporte-pruebas.js"
+```
+
+Ejecuta `jest --coverage`, avisa si alguna prueba falló y luego lee `coverage/coverage-final.json` para
+mostrar una tabla con el **% de cobertura y las líneas sin cobertura de cada archivo**, más una lista de
+los componentes que faltan por probar:
+
+```text
+=============================================================================
+                 RESUMEN DE COBERTURA Y LINEAS SIN PRUEBAS
+=============================================================================
+Archivo                                      | Cobertura    | Lineas sin cobertura
+-----------------------------------------------------------------------------
+src/value-object/primitives/date-value-object.ts| 100.0%       | Ninguna (100%)
+src/value-object/primitives/enum-value-object.ts| 83.3%        | 11
+...
+-----------------------------------------------------------------------------
+TOTAL PROYECTO: 64.2% de cobertura global
+```
+
+**Los dos scripts se mantienen** porque se complementan:
+
+| | `npm run test:coverage` (Simón) | `npm run test:report` (Abraham) |
+|---|---|---|
+| Lenguaje | Bash + Node.js | Node.js |
+| Pruebas que fallan | Lista cada prueba con su mensaje de error | Aviso general |
+| Código no cubierto | Líneas, funciones y ramas | Líneas |
+| Genera `lcov.info` (SonarCloud) | Sí | No |
+| Código de salida para CI | `1` si falla una prueba | Siempre `0` |
+
+### 3.6 Resultados después de integrar las pruebas de Abraham
+
+```bash
+git merge origin/feature/pruebas-unitarias
+npm run test:coverage
+```
+
+```text
+==================== 2. PRUEBAS QUE FALLAN ====================
+Suites : 11 OK / 0 con fallos / 11 total
+Pruebas: 23 OK / 0 fallidas / 23 total
+
+✔ Todas las pruebas pasaron.
+
+==================== RESUMEN DE COBERTURA ====================
+  Sentencias  :  64.17 %  (43/67)
+  Ramas       :     90 %  (9/10)
+  Funciones   :     80 %  (24/30)
+  Líneas      :  64.17 %  (43/67)
   Resultado    : ÉXITO ✔
 ```
 
-### 3.4 Resultados
+**Pruebas:**
 
-**Pruebas:** 10 suites, **18 pruebas: 18 aprobadas y 0 fallidas**.
+| | Antes | Después |
+|---|---:|---:|
+| Suites | 10 | 11 |
+| Pruebas | 18 | **23** |
+| Fallidas | 0 | 0 |
 
-| Archivo | % Sentencias | % Ramas | % Funciones | % Líneas |
-|---|---:|---:|---:|---:|
-| src/index.ts | 62.5 | 100 | 25 | 62.5 |
-| src/quality/errores-object.ts | 0 | 100 | 0 | 0 |
-| src/quality/insecure-1-object.ts | 0 | 100 | 100 | 0 |
-| src/quality/insecure-2-object.ts | 0 | 100 | 0 | 0 |
-| src/value-object/primitives/date-value-object.ts | 6.66 | 0 | 0 | 6.66 |
-| src/value-object/primitives/enum-value-object.ts | 83.33 | 0 | 100 | 83.33 |
-| src/value-object/primitives/number-value-object.ts | 100 | 100 | 100 | 100 |
-| src/value-object/primitives/string-value-object.ts | 100 | 100 | 100 | 100 |
-| **TOTAL** | **43.28** | **60** | **56.66** | **43.28** |
+**Cobertura por archivo (% de líneas):**
+
+| Archivo | Antes | Después |
+|---|---:|---:|
+| src/index.ts | 62.5 | 62.5 |
+| src/quality/errores-object.ts | 0 | 0 |
+| src/quality/insecure-1-object.ts | 0 | 0 |
+| src/quality/insecure-2-object.ts | 0 | 0 |
+| src/value-object/primitives/date-value-object.ts | **6.66** | **100** |
+| src/value-object/primitives/enum-value-object.ts | 83.33 | 83.33 |
+| src/value-object/primitives/number-value-object.ts | 100 | 100 |
+| src/value-object/primitives/string-value-object.ts | 100 | 100 |
+
+**Cobertura total:**
+
+| Métrica | Antes | Después |
+|---|---:|---:|
+| Sentencias | 43.28 % | **64.17 %** |
+| Ramas | 60 % | **90 %** |
+| Funciones | 56.66 % | **80 %** |
+| Líneas | 43.28 % | **64.17 %** |
 
 **Análisis:**
-- `StringValueObject` y `NumberValueObject` están **100 % cubiertos**.
-- `DateValueObject` **no tiene ninguna prueba** (6,66 %), y es lo que más baja el promedio.
-- En `EnumValueObject` falta probar el caso de **valor inválido** (la rama del `throw`).
-- `src/quality/*.ts` es código de ejemplo inseguro, sin pruebas.
-- **Mejora recomendada:** crear pruebas para `DateValueObject` y para el caso inválido de `EnumValueObject`.
+- `DateValueObject` pasó de **6,66 % a 100 %** y se corrigió un bug que dejaba la clase inutilizable.
+- La cobertura total subió **casi 21 puntos** (de 43 % a 64 %).
+- **Pendiente:** en `EnumValueObject` falta probar el caso de **valor inválido** (línea 11, la rama del `throw`).
+- `src/quality/*.ts` es código de ejemplo inseguro, sin pruebas; es lo que mantiene la cobertura total bajo 100 %.
 
 > **Observación:** durante la ejecución aparece el aviso *"Cannot log after tests are done"*. Se debe a
 > que `src/index.ts` ejecuta `fetchData()` al ser importado y llama a `api.example.com`. Es un problema
@@ -475,6 +619,8 @@ Pruebas: 18 OK / 0 fallidas / 18 total
 ```
 
 Las **18 pruebas siguen pasando** y la cobertura no cambió: la actualización no introdujo regresiones.
+(Esta remediación se hizo **antes** de integrar las pruebas de Abraham; con todo integrado pasan
+23 de 23 pruebas, ver sección 3.6).
 
 ##### Paso 5 – Evidencia "después"
 
@@ -581,8 +727,9 @@ navegando el historial del repositorio o con `git log -p -- credentials.yml`. Po
 
 ## 6. Conclusiones
 
-- Las **pruebas unitarias** detectan errores temprano y evitan regresiones. Con un 43 % de cobertura,
-  más de la mitad del código podría romperse sin que ninguna prueba lo detecte.
+- Las **pruebas unitarias** detectan errores temprano y evitan regresiones. Con el 43 % de cobertura
+  inicial, un bug que dejaba inutilizable `DateValueObject` pasaba desapercibido. Al escribir pruebas
+  para esa clase, el bug apareció, se corrigió y la cobertura subió a **64 %**.
 - **npm audit, Snyk y Dependabot** atacan el mismo problema (dependencias vulnerables) desde distintos
   puntos del ciclo de vida: en el equipo local, en una plataforma de seguridad y directamente en GitHub.
   Los tres coincidieron en hallazgos como `handlebars`, `tar`, `lodash` y `chokidar`.
@@ -594,9 +741,22 @@ navegando el historial del repositorio o con `git log -p -- credentials.yml`. Po
 
 **Conclusión personal:** con este trabajo nos dimos cuenta de que tener las pruebas en verde no significa
 que el proyecto esté bien: con 18 pruebas pasando igual teníamos menos de la mitad del código cubierto,
-secretos expuestos y dependencias vulnerables. También aprendimos que ninguna herramienta lo ve todo
+un bug escondido en `DateValueObject`, secretos expuestos y dependencias vulnerables. También aprendimos que ninguna herramienta lo ve todo
 (Secret scanning no marcó los tokens, pero SonarCloud sí) y que después de cada corrección hay que volver
 a escanear y a correr las pruebas, porque arreglar una cosa puede traer otro problema, como nos pasó con `picomatch`.
+
+---
+
+## 7. Distribución del trabajo
+
+| Integrante | Rama | Actividades realizadas |
+|---|---|---|
+| **Abraham Ravelo** | `feature/pruebas-unitarias` (PR #4) | • Detectó y corrigió el bug de la condición invertida en `DateValueObject` (sección 3.4).<br>• Creó el *mock* `BirthDate` y las 5 pruebas unitarias de `DateValueObject`, que subieron su cobertura de 6,66 % a 100 %.<br>• Creó el script `scripts/reporte-pruebas.js` y el comando `npm run test:report` (sección 3.5).<br>• Redactó los conceptos clave (IE3.1.1) y la tabla de herramientas (IE3.2.1) de las secciones 1.1 y 1.2. |
+| **Simón Lagos** | `feature/parcial2-simon` | • Preparó el entorno (Node.js) y la rama de trabajo.<br>• Creó el script `scripts/run-tests.sh` y el comando `npm run test:coverage` (sección 3.2).<br>• Ejecutó `npm audit` y guardó los reportes en `docs/` (sección 4.1).<br>• Conectó y analizó el repositorio en Snyk (4.2) y SonarCloud, con `sonar-project.properties` (4.3), y activó GitHub Advanced Security (4.4).<br>• Aplicó la Remediación 1 (`chokidar` 3.6.0, detectada por Snyk) y la Remediación 2 (eliminación de `credentials.yml`, detectada por SonarCloud) (4.5).<br>• Integró la rama de Abraham con `git merge`, resolvió el conflicto de `package.json` y unificó la documentación en este archivo. |
+
+**Integración:** como Abraham no estaba disponible al momento de unir el trabajo, su rama
+(`feature/pruebas-unitarias`, PR #4) se integró en `feature/parcial2-simon` mediante `git merge`. Su
+commit conserva su autoría en el historial de Git (`git log --format='%an %s'`).
 
 ---
 
@@ -604,8 +764,11 @@ a escanear y a correr las pruebas, porque arreglar una cosa puede traer otro pro
 
 | Archivo | Cambio |
 |---|---|
+| `src/value-object/primitives/date-value-object.ts` | *(Abraham)* Corrección del bug de validación de fechas |
+| `test/value-object/primitives/DateValueObject/*` | *(Abraham)* Nuevo: mock `BirthDate` y 5 pruebas unitarias |
+| `scripts/reporte-pruebas.js` | *(Abraham)* Nuevo: script de reporte de cobertura (`npm run test:report`) |
 | `scripts/run-tests.sh` | Nuevo: script de pruebas, cobertura, fallos y código no cubierto |
-| `package.json` | `test:coverage` ahora ejecuta `bash scripts/run-tests.sh`; `chokidar` actualizado a `^3.6.0` |
+| `package.json` | `test:coverage` ejecuta `bash scripts/run-tests.sh`; `test:report` *(Abraham)*; `chokidar` actualizado a `^3.6.0` |
 | `package-lock.json` | Remediación: `chokidar@3.6.0` y eliminación de 134 paquetes obsoletos |
 | `docs/npm-audit-prod-ANTES.txt` / `-DESPUES.txt` | Evidencia de la remediación (npm audit de producción) |
 | `credentials.yml` | **Eliminado**: remediación del hallazgo *Blocker* de SonarCloud |
@@ -614,4 +777,5 @@ a escanear y a correr las pruebas, porque arreglar una cosa puede traer otro pro
 | `docs/npm-audit-report.txt` / `.json` | Nuevo: reporte completo de npm audit |
 | `docs/npm-audit-prod-report.txt` | Nuevo: reporte de npm audit solo de producción |
 | `img/*.jpg` | Capturas de evidencia |
-| `DOCUMENTACION.md` | Nuevo: este documento |
+| `DOCUMENTACION.md` | Nuevo: este documento (incluye el contenido del `INFORME.md` de Abraham) |
+| `INFORME.md` | *(Abraham)* Integrado en este documento y luego eliminado, para dejar un solo documento |
