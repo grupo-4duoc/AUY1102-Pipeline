@@ -43,7 +43,8 @@
     "prepublishOnly": "npm run build:ci",
     "sort": "sort-package-json package.json",
     "test:unit": "jest --passWithNoTests",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "bash scripts/run-tests.sh",
+    "test:report": "node scripts/reporte-pruebas.js",
     "test:dev": "jest --verbose --colors --expand --maxWorkers=50% --detectOpenHandles --errorOnDeprecated --bail",
     "test:watch": "jest --watch --verbose --colors --expand --maxWorkers=25%",
     "types": "dts-bundle-generator --config dts-generator.json"
@@ -113,7 +114,8 @@
     "node": ">=14"
   },
   "dependencies": {
-    "chokidar": "^2.0.3",
+    "chokidar": "^3.6.0",
     "cosmiconfig": "^6.0.0"
   }
 }
+

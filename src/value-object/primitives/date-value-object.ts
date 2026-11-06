@@ -10,7 +10,7 @@ export abstract class DateValueObject extends StringValueObject {
   }
 
   private checkDateIsValue(date: string): void {
-    if (!Number.isNaN(new Date(date).getTime())) {
+    if (Number.isNaN(new Date(date).getTime())) {
       this.throwErrorForInvalidDate(date);
     }
   }
@@ -37,3 +37,4 @@ export abstract class DateValueObject extends StringValueObject {
 
   protected abstract throwErrorForInvalidDate(value: string): void;
 }
+
