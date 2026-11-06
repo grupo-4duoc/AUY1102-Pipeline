@@ -6,12 +6,12 @@
 |---|---|
 | Organización GitHub | `grupo-4duoc` |
 | Repositorio | https://github.com/grupo-4duoc/AUY1102-Pipeline |
+| Repositorio base (docente) | https://github.com/Fundacion-Instituto-Profesional-Duoc-UC/AUY1102-Pipeline |
 | Rama de trabajo | `feature/parcial2-simon` |
 | Integrantes | Simón Lagos · [COMPLETAR nombre pareja] |
-| Fecha | [COMPLETAR] |
+| Fecha | 06-11-2026 |
 
-> **Cómo usar este documento:** cada `📸 CAPTURA` indica dónde pegar un pantallazo.
-> En Markdown se insertan así: `![Descripción](img/nombre-captura.png)` (guardar las imágenes en la carpeta `img/`).
+> Las imágenes están en la carpeta `img/` del repositorio.
 
 ---
 
@@ -22,11 +22,11 @@
 3. [Parte 1 – Pruebas unitarias y cobertura](#3-parte-1--pruebas-unitarias-y-cobertura)
 4. [Parte 2 – Análisis de seguridad y código estático](#4-parte-2--análisis-de-seguridad-y-código-estático)
    - 4.1 [npm audit](#41-npm-audit)
-   - 4.2 [SonarCloud](#42-sonarcloud)
-   - 4.3 [Snyk](#43-snyk)
+   - 4.2 [Snyk](#42-snyk)
+   - 4.3 [SonarCloud](#43-sonarcloud)
    - 4.4 [GitHub Advanced Security](#44-github-advanced-security)
    - 4.5 [Remediación](#45-remediación)
-5. [Hallazgos de seguridad detectados manualmente](#5-hallazgos-de-seguridad-detectados-manualmente)
+5. [Hallazgos de seguridad detectados en el código](#5-hallazgos-de-seguridad-detectados-en-el-código)
 6. [Conclusiones](#6-conclusiones)
 
 ---
@@ -34,31 +34,31 @@
 ## 1. Contexto
 
 La empresa *Integration Solutions* busca automatizar su ciclo de desarrollo migrando a GitHub e
-incorporando revisiones de **calidad** (pruebas unitarias, cobertura, análisis estático) y de
+incorporando revisiones de **calidad** (pruebas unitarias, cobertura y análisis estático) y de
 **seguridad** (vulnerabilidades en dependencias, código inseguro y secretos expuestos).
 
 El proyecto es una librería **TypeScript** de *Value Objects* (`StringValueObject`,
 `NumberValueObject`, `DateValueObject`, `EnumValueObject`) probada con **Jest**. La carpeta
-`src/quality/` contiene código inseguro intencional que sirve para validar las herramientas
-de análisis.
+`src/quality/` contiene código inseguro intencional que sirve para validar las herramientas de análisis.
 
 **¿Por qué importa en el ciclo de vida?** Mientras antes se detecta un error o una vulnerabilidad
-(*shift-left*), más barato es corregirlo: un bug detectado por una prueba unitaria en el PR cuesta
-minutos, mientras que el mismo bug en producción puede costar días e incidentes de seguridad.
+(*shift-left*), más barato es corregirlo. Un bug detectado por una prueba unitaria en un Pull Request
+cuesta minutos; el mismo bug en producción puede costar días y generar incidentes de seguridad.
 
 ---
 
 ## 2. Preparación del entorno
 
-### 2.1 Verificación de herramientas
+### 2.1 Herramientas
 
-```powershell
-git --version     # git version 2.54.0.windows.1
-node --version    # (no instalado inicialmente)
-npm --version     # (no instalado inicialmente)
-```
+| Herramienta | Versión | Uso |
+|---|---|---|
+| Git | 2.54 | Control de versiones |
+| Node.js | v26.13.0 (LTS) | Ejecutar el proyecto y las pruebas |
+| npm | 11.20.0 | Dependencias, scripts y `npm audit` |
+| Visual Studio Code | – | Editor y terminal |
 
-Node.js no estaba instalado, así que se instaló la versión LTS con el gestor de paquetes de Windows:
+Node.js no estaba instalado, así que se instaló con el gestor de paquetes de Windows:
 
 ```powershell
 winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
@@ -66,37 +66,20 @@ node --version    # v26.13.0
 npm --version     # 11.20.0
 ```
 
-📸 **CAPTURA 1:** terminal mostrando `git --version`, `node --version` y `npm --version`.
+### 2.2 Repositorio (fork) y rama de trabajo
 
-### 2.2 Fork / repositorio y rama de trabajo
-
-1. El repositorio base indicado por el docente se replicó en la organización `grupo-4duoc`.
-2. Se clonó localmente y se creó una rama propia (trabajo en pareja: **no se trabaja sobre `master`**):
+1. Se creó un **fork** del repositorio indicado por el docente
+   (`Fundacion-Instituto-Profesional-Duoc-UC/AUY1102-Pipeline`) dentro de la organización `grupo-4duoc`.
+2. Se clonó localmente y se creó una rama propia. Como el trabajo es en pareja, **no se trabaja sobre `master`**:
 
 ```bash
 git clone https://github.com/grupo-4duoc/AUY1102-Pipeline.git
 cd AUY1102-Pipeline
-git pull origin master
 git checkout -b feature/parcial2-simon
-```
-
-📸 **CAPTURA 2:** repositorio en GitHub dentro de la organización `grupo-4duoc`.
-
-📸 **CAPTURA 3:** `git branch` mostrando la rama `feature/parcial2-simon` activa.
-
-### 2.3 Instalación de dependencias
-
-```bash
 npm install
 ```
 
-Resultado: se instalaron **1599 paquetes** y npm advirtió **82 vulnerabilidades** (analizadas en la sección 4.1).
-
-> **Nota Windows:** en este equipo el comando `bash` apuntaba a WSL. Para que `npm run` ejecute
-> scripts `.sh` con Git Bash se configuró (solo a nivel de usuario, no afecta el repo):
-> ```powershell
-> npm config set script-shell "C:\Program Files\Git\bin\bash.exe" --location=user
-> ```
+`npm install` instaló **1599 paquetes** y advirtió **82 vulnerabilidades**, que se analizan en la sección 4.1.
 
 ---
 
@@ -105,10 +88,10 @@ Resultado: se instalaron **1599 paquetes** y npm advirtió **82 vulnerabilidades
 ### 3.1 Conceptos
 
 - **Prueba unitaria:** verifica una unidad pequeña de código (una función o un método) de forma aislada.
-- **Cobertura de código:** porcentaje del código que se ejecuta durante las pruebas. Se mide en:
-  - *Sentencias* (statements), *Líneas*, *Funciones* y *Ramas* (cada camino de un `if/else`).
-- Una cobertura baja **no significa que el código falle**, sino que hay partes **sin verificar**,
-  donde un cambio futuro podría romper algo sin que nadie lo note (riesgo de regresión).
+- **Cobertura de código:** porcentaje del código que se ejecuta durante las pruebas. Se mide en
+  *sentencias*, *líneas*, *funciones* y *ramas* (cada camino de un `if/else`).
+- Una cobertura baja **no significa que el código falle**, sino que hay partes **sin verificar**, donde
+  un cambio futuro podría romper algo sin que nadie lo note (**riesgo de regresión**).
 
 ### 3.2 Script creado: `scripts/run-tests.sh`
 
@@ -119,17 +102,15 @@ Se creó el script [`scripts/run-tests.sh`](scripts/run-tests.sh) y se conectó 
 "test:coverage": "bash scripts/run-tests.sh"
 ```
 
-**Qué hace el script:**
-
-| Etapa | Descripción |
+| Etapa | Qué hace |
 |---|---|
-| 1. Ejecutar pruebas | Ejecuta `jest --coverage` generando reportes `json`, `json-summary` y `lcov`, y guarda el resultado de cada prueba en `coverage/test-results.json`. |
-| 2. Pruebas que fallan | Lee el JSON de resultados y lista cada prueba fallida con su archivo y su mensaje de error. |
-| 3. Código no cubierto | Por cada archivo lista las **líneas**, **funciones** y **ramas** que ninguna prueba ejecutó. |
+| 1. Ejecutar pruebas | Ejecuta `jest --coverage` y genera reportes `json`, `json-summary` y `lcov` (`coverage/lcov.info`, que puede usar SonarCloud). |
+| 2. Pruebas que fallan | Lista cada prueba fallida con su archivo y su mensaje de error. |
+| 3. Código no cubierto | Por cada archivo muestra las **líneas**, **funciones** y **ramas** que ninguna prueba ejecutó. |
 | 4. Resumen | Tabla de % de cobertura por archivo y total. |
 | Salida | Código `0` si todo pasa y `1` si alguna prueba falla (útil para CI). |
 
-Además se agregó `coverage` al `.gitignore`, porque los reportes son generados y no deben versionarse.
+Además se agregó `coverage` al `.gitignore`, porque los reportes son archivos generados.
 
 ### 3.3 Ejecución
 
@@ -137,19 +118,50 @@ Además se agregó `coverage` al `.gitignore`, porque los reportes son generados
 npm run test:coverage
 ```
 
-📸 **CAPTURA 4:** sección "2. PRUEBAS QUE FALLAN" en la terminal.
+**Salida del script (pruebas que fallan):**
 
-📸 **CAPTURA 5:** sección "3. CÓDIGO NO CUBIERTO POR PRUEBAS".
+```text
+==================== 2. PRUEBAS QUE FALLAN ====================
+Suites : 10 OK / 0 con fallos / 10 total
+Pruebas: 18 OK / 0 fallidas / 18 total
 
-📸 **CAPTURA 6:** sección "RESUMEN DE COBERTURA".
+✔ Todas las pruebas pasaron.
+```
 
-📸 **CAPTURA 7 (opcional):** reporte HTML `coverage/lcov-report/index.html` abierto en el navegador.
+**Salida del script (código no cubierto):**
+
+```text
+==================== 3. CÓDIGO NO CUBIERTO POR PRUEBAS ====================
+• src/index.ts
+    Líneas sin cubrir   : 8-10
+• src/quality/errores-object.ts
+    Líneas sin cubrir   : 2-3, 6
+• src/quality/insecure-1-object.ts
+    Líneas sin cubrir   : 1-3, 5, 7, 10
+• src/quality/insecure-2-object.ts
+    Líneas sin cubrir   : 1-2, 6-7, 11-12, 18, 22, 24, 30, 32
+• src/value-object/primitives/date-value-object.ts
+    Líneas sin cubrir   : 3, 7-9, 13-14, 19, 23-25, 29-30, 34-35
+    Ramas (if/else) sin cubrir: 3
+• src/value-object/primitives/enum-value-object.ts
+    Líneas sin cubrir   : 11
+    Ramas (if/else) sin cubrir: 1
+```
+
+**Salida del script (resumen de cobertura):**
+
+```text
+==================== RESUMEN DE COBERTURA ====================
+  Sentencias  :  43.28 %  (29/67)
+  Ramas       :     60 %  (6/10)
+  Funciones   :  56.66 %  (17/30)
+  Líneas      :  43.28 %  (29/67)
+  Resultado    : ÉXITO ✔
+```
 
 ### 3.4 Resultados
 
-**Pruebas:** 10 suites, **18 pruebas, 18 aprobadas, 0 fallidas**.
-
-**Cobertura por archivo:**
+**Pruebas:** 10 suites, **18 pruebas: 18 aprobadas y 0 fallidas**.
 
 | Archivo | % Sentencias | % Ramas | % Funciones | % Líneas |
 |---|---:|---:|---:|---:|
@@ -163,22 +175,16 @@ npm run test:coverage
 | src/value-object/primitives/string-value-object.ts | 100 | 100 | 100 | 100 |
 | **TOTAL** | **43.28** | **60** | **56.66** | **43.28** |
 
-**Código no cubierto (principal):**
+**Análisis:**
+- `StringValueObject` y `NumberValueObject` están **100 % cubiertos**.
+- `DateValueObject` **no tiene ninguna prueba** (6,66 %), y es lo que más baja el promedio.
+- En `EnumValueObject` falta probar el caso de **valor inválido** (la rama del `throw`).
+- `src/quality/*.ts` es código de ejemplo inseguro, sin pruebas.
+- **Mejora recomendada:** crear pruebas para `DateValueObject` y para el caso inválido de `EnumValueObject`.
 
-| Archivo | Líneas sin cubrir | Motivo |
-|---|---|---|
-| `date-value-object.ts` | 3, 7-9, 13-14, 19, 23-25, 29-30, 34-35 | **No existe ninguna prueba** para `DateValueObject`. |
-| `enum-value-object.ts` | 11 | No se prueba el caso de **valor inválido** (rama del `throw`). |
-| `src/index.ts` | 8-10 | Callbacks de un `fetch` a una API externa (ver hallazgo 5.1). |
-| `src/quality/*.ts` | todas | Código de ejemplo inseguro, sin pruebas. |
-
-**Análisis:** las clases `String` y `Number` están 100% cubiertas. La cobertura total baja por
-`DateValueObject` (sin pruebas) y por el código de `src/quality/`. **Mejora recomendada:** crear
-`test/value-object/primitives/DateValueObject/*.test.ts` y una prueba del caso inválido de `EnumValueObject`.
-
-> **Observación:** durante la ejecución aparece el aviso *"Cannot log after tests are done"*. Se debe
-> a que `src/index.ts` ejecuta `fetchData()` al ser importado (efecto secundario) y llama a
-> `api.example.com`. Es un problema de diseño que también afecta a la seguridad (ver 5.1).
+> **Observación:** durante la ejecución aparece el aviso *"Cannot log after tests are done"*. Se debe a
+> que `src/index.ts` ejecuta `fetchData()` al ser importado y llama a `api.example.com`. Es un problema
+> de diseño que además expone credenciales (ver sección 5).
 
 ---
 
@@ -189,11 +195,11 @@ npm run test:coverage
 **Qué es:** comando nativo de npm que compara las dependencias instaladas (directas y transitivas)
 con la base de datos de vulnerabilidades conocidas (GitHub Advisory Database / CVE).
 
-**Ejecución y evidencias:**
+**Ejecución:**
 
 ```bash
-npm audit > docs/npm-audit-report.txt               # reporte completo legible
-npm audit --json > docs/npm-audit-report.json       # reporte completo JSON
+npm audit > docs/npm-audit-report.txt                  # reporte completo
+npm audit --json > docs/npm-audit-report.json          # reporte completo en JSON
 npm audit --omit=dev > docs/npm-audit-prod-report.txt  # solo dependencias de producción
 ```
 
@@ -201,7 +207,12 @@ Reportes: [`docs/npm-audit-report.txt`](docs/npm-audit-report.txt) ·
 [`docs/npm-audit-report.json`](docs/npm-audit-report.json) ·
 [`docs/npm-audit-prod-report.txt`](docs/npm-audit-prod-report.txt)
 
-📸 **CAPTURA 8:** salida de `npm audit` (resumen final con el total de vulnerabilidades).
+```text
+82 vulnerabilities (11 low, 20 moderate, 49 high, 2 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+```
 
 **Resultados:**
 
@@ -215,26 +226,56 @@ Reportes: [`docs/npm-audit-report.txt`](docs/npm-audit-report.txt) ·
 
 **Vulnerabilidades más relevantes:**
 
-| Paquete | Severidad | Tipo | Directa | Corrección |
-|---|---|---|---|---|
-| `handlebars` | Crítica | Inyección de JavaScript | No (transitiva) | `npm audit fix` |
-| `tar` | Crítica | Sobrescritura de archivos (*path traversal*) | No (transitiva) | `npm audit fix` |
-| `@faker-js/faker` | Alta | Ejecución arbitraria de código | Sí (dev) | Subir a v10 (*breaking*) |
-| `chokidar` → `braces`, `micromatch` | Alta | ReDoS (denegación de servicio) | Sí (**producción**) | Subir a v6 (*breaking*) |
-| `lodash` | Alta | Inyección de código / *prototype pollution* | No | `npm audit fix` |
-| `cross-spawn`, `minimatch`, `picomatch` | Alta | ReDoS | No | `npm audit fix` |
+| Paquete | Severidad | Tipo | Corrección |
+|---|---|---|---|
+| `handlebars` | Crítica | Inyección de JavaScript | `npm audit fix` |
+| `tar` | Crítica | Sobrescritura de archivos (*path traversal*) | `npm audit fix` |
+| `@faker-js/faker` | Alta | Ejecución arbitraria de código | Subir a v10 (cambio mayor) |
+| `chokidar` → `braces`, `micromatch` | Alta | ReDoS (denegación de servicio) | Subir de versión (cambio mayor) |
+| `lodash` | Alta | Inyección de código / *prototype pollution* | `npm audit fix` |
 
-**Interpretación:**
-- 74 de 82 vulnerabilidades están en **herramientas de desarrollo** (semantic-release, eslint, babel).
-  No se distribuyen con la librería, pero sí se ejecutan en los equipos de desarrollo y en CI.
-- Las **8 de producción** vienen de `chokidar@2` (muy antigua). Para eliminarlas hay que migrar a
-  `chokidar@6`, lo que implica un cambio mayor que hay que probar.
-- Las 2 críticas se pueden corregir con `npm audit fix` sin cambios incompatibles.
+**Interpretación:** 74 de las 82 vulnerabilidades están en **herramientas de desarrollo** (eslint,
+semantic-release, babel). Las **8 de producción** vienen de `chokidar@2`, que es muy antigua.
+Las 2 críticas se pueden corregir con `npm audit fix` sin cambios incompatibles.
 
-### 4.2 SonarCloud
+### 4.2 Snyk
+
+**Qué es:** herramienta de seguridad que analiza las **dependencias** (SCA – *Snyk Open Source*)
+y también las imágenes de contenedor (Dockerfile). Prioriza cada hallazgo y sugiere cómo corregirlo.
+
+**Pasos realizados:**
+
+1. Ingresar a https://app.snyk.io con la cuenta de GitHub. En **Settings → Integrations**, la
+   integración **GitHub** aparece como *Configured*.
+2. Ir a **Projects → Add projects**. Como el repositorio es **público**, se usó la opción
+   **"monitor a public repository"**, que no requiere dar permisos extra a Snyk sobre la organización.
+3. Escribir `grupo-4duoc/AUY1102-Pipeline` → **Add repo**. Snyk detecta un archivo de manifiesto
+   soportado → **Import 1 repository**.
+4. Snyk importa el repositorio (rama `master`) y ejecuta el escaneo automáticamente. Para volver a
+   escanear después de un cambio se usa **Retest now** dentro del proyecto.
+
+![Proyecto importado en Snyk](img/05a-snyk-proyecto-importado.jpg)
+
+**Resultados del escaneo (estado inicial, antes de la remediación):**
+
+| Proyecto Snyk | Críticas | Altas | Medias | Bajas |
+|---|---:|---:|---:|---:|
+| `Dockerfile` (imagen base) | 1 | 14 | 17 | 5 |
+| `package.json` (dependencias npm) | 0 | 4 | 3 | 0 |
+| **Total** | **1** | **18** | **20** | **5** |
+
+![Resumen del proyecto package.json en Snyk](img/05b-snyk-package-json-resumen.jpg)
+
+**Hallazgo principal en `package.json`:** `chokidar@2.0.3` arrastra 7 vulnerabilidades transitivas
+(ReDoS en `decode-uri-component`, consumo excesivo de recursos y recursión no controlada en `braces`).
+Snyk indica que **actualizar a `chokidar@3.0.0` corrige 6 de ellas** (cambio de versión mayor).
+
+![Vulnerabilidades de chokidar detectadas por Snyk](img/05c-snyk-vulnerabilidades-chokidar.jpg)
+
+### 4.3 SonarCloud
 
 **Qué es:** plataforma de análisis **estático** de código (SAST) que detecta *bugs*, vulnerabilidades,
-*security hotspots*, *code smells*, duplicación y además muestra la cobertura de pruebas.
+*security hotspots*, *code smells* y duplicación, y muestra la cobertura de pruebas.
 
 **Configuración en el repositorio:** se creó [`sonar-project.properties`](sonar-project.properties):
 
@@ -248,26 +289,17 @@ sonar.javascript.lcov.reportPaths=coverage/lcov.info
 
 **Pasos realizados:**
 
-1. Ingresar a https://sonarcloud.io con **"Log in with GitHub"**.
-2. **+ → Analyze new project → Import an organization** → seleccionar `grupo-4duoc` e instalar la
-   aplicación de SonarCloud en GitHub (dar acceso al repositorio `AUY1102-Pipeline`).
-   📸 **CAPTURA 9:** autorización de la app SonarCloud en GitHub.
-3. Seleccionar el repositorio `AUY1102-Pipeline` → **Set up**.
-   📸 **CAPTURA 10:** proyecto creado en SonarCloud.
-4. Verificar que la **Project Key** coincida con `sonar.projectKey`
-   (*Administration → Update Key* o *Information*).
-5. Elegir el método de análisis:
-   - **Automatic Analysis** (por defecto): no requiere configuración extra, **pero no importa cobertura**.
-   - **GitHub Actions (CI)**: permite mostrar la cobertura de `coverage/lcov.info`. Requiere:
-     1. *SonarCloud → My Account → Security → Generate Token*.
-     2. *GitHub → Settings → Secrets and variables → Actions → New repository secret*:
-        nombre **`SONAR_TOKEN`**, valor = token generado.
-     3. *SonarCloud → Administration → Analysis Method →* desactivar *Automatic Analysis*.
-   - Método utilizado: **[COMPLETAR: Automatic / GitHub Actions]**
-   📸 **CAPTURA 11:** secreto `SONAR_TOKEN` creado en GitHub (solo se ve el nombre, no el valor).
+1. Ingresar a https://sonarcloud.io con **GitHub**.
+2. La aplicación **SonarQube Cloud** está instalada en la organización de GitHub `grupo-4duoc`
+   (*Organization Settings → GitHub Apps*), con acceso al repositorio `AUY1102-Pipeline`.
+3. En SonarCloud existe la organización **`grupo-4duoc`** vinculada a GitHub.
+4. **Analyze new project →** organización `grupo-4duoc` → seleccionar `AUY1102-Pipeline` → **Set up**.
 
-**Resultados:** 📸 **CAPTURA 12:** *Overview* del proyecto (Quality Gate, Bugs, Vulnerabilities,
-Security Hotspots, Code Smells, Coverage).
+> **Incidencia:** al listar los repositorios, SonarCloud respondió *"The request cannot be processed.
+> Try again later"* en varios intentos. [COMPLETAR: cómo se resolvió (reintento más tarde o creación
+> manual del proyecto + análisis con GitHub Actions y el secreto `SONAR_TOKEN`)].
+
+**Resultados:** [COMPLETAR cuando termine el análisis]
 
 | Métrica | Valor |
 |---|---|
@@ -277,65 +309,51 @@ Security Hotspots, Code Smells, Coverage).
 | Security Hotspots | [COMPLETAR] |
 | Code Smells | [COMPLETAR] |
 | Coverage | [COMPLETAR] |
-| Duplications | [COMPLETAR] |
-
-📸 **CAPTURA 13:** detalle de un *Security Hotspot* o vulnerabilidad (por ejemplo, credenciales en código).
-
-### 4.3 Snyk
-
-**Qué es:** herramienta de seguridad que analiza **dependencias** (SCA – *Snyk Open Source*) y
-**código propio** (SAST – *Snyk Code*), con propuestas de corrección automática mediante PR.
-
-**Pasos realizados:**
-
-1. Ingresar a https://app.snyk.io con la cuenta de GitHub.
-2. **Integrations → GitHub → Connect**: autorizar a Snyk para la organización `grupo-4duoc`.
-   📸 **CAPTURA 14:** integración GitHub conectada en Snyk.
-3. **Projects → Add project → GitHub →** seleccionar `grupo-4duoc/AUY1102-Pipeline` → **Add selected repositories**.
-4. Snyk ejecuta el escaneo automáticamente (`package.json` y código fuente).
-   Para volver a escanear: abrir el proyecto → **Retest now**.
-5. (Opcional) Activar **Snyk Code** en *Settings → Snyk Code* para analizar el código TypeScript.
-
-> No se requiere secreto en GitHub cuando se importa el repositorio desde la consola web.
-> `SNYK_TOKEN` solo es necesario si se ejecuta Snyk desde GitHub Actions o la CLI.
-
-**Resultados:** 📸 **CAPTURA 15:** lista de proyectos/vulnerabilidades en Snyk.
-
-| Proyecto Snyk | Críticas | Altas | Medias | Bajas |
-|---|---:|---:|---:|---:|
-| package.json (Open Source) | [COMPLETAR] | [COMPLETAR] | [COMPLETAR] | [COMPLETAR] |
-| Code analysis (Snyk Code) | [COMPLETAR] | [COMPLETAR] | [COMPLETAR] | [COMPLETAR] |
-
-📸 **CAPTURA 16:** detalle de una vulnerabilidad en Snyk (descripción, ruta, *fix* sugerido).
 
 ### 4.4 GitHub Advanced Security
 
-**Qué es:** conjunto de funciones de seguridad integradas en GitHub:
-- **Dependency graph / Dependabot alerts:** alertas por dependencias vulnerables.
-- **Dependabot security updates:** abre PRs automáticos con la versión corregida.
-- **Secret scanning:** detecta tokens y contraseñas subidos al repositorio.
-- **Push protection:** bloquea un `git push` que contenga un secreto.
-- **Code scanning (CodeQL):** análisis estático. El repo ya incluye `.github/workflows/codeql.yml`.
+**Qué es:** funciones de seguridad integradas en GitHub:
+- **Dependency graph:** inventario de las dependencias del proyecto.
+- **Dependabot alerts:** alertas cuando una dependencia tiene una vulnerabilidad conocida.
+- **Secret scanning (Secret Protection):** detecta tokens y contraseñas subidos al repositorio.
+- **Code scanning (CodeQL):** análisis estático. El repositorio ya incluye `.github/workflows/codeql.yml`.
 
-> En repositorios **públicos** estas funciones son gratuitas. En repositorios **privados** de una
-> organización se requiere licencia de GitHub Advanced Security / Secret Protection.
+> En repositorios **públicos** estas funciones son gratuitas.
+
+**Estado inicial:** Dependabot alerts y Secret scanning estaban **desactivados**.
+
+![GitHub Security antes de activar](img/07a-github-security-antes.jpg)
 
 **Pasos realizados:**
 
-1. Repositorio → **Settings → Code security** (*Code security and analysis*).
-2. Activar: **Dependency graph**, **Dependabot alerts**, **Dependabot security updates**,
-   **Secret scanning** y **Push protection**.
-   📸 **CAPTURA 17:** pantalla de *Code security* con las opciones activadas.
-3. Revisar resultados en la pestaña **Security**:
-   - *Dependabot alerts* → 📸 **CAPTURA 18**
-   - *Secret scanning alerts* → 📸 **CAPTURA 19**
-   - *Code scanning alerts* (CodeQL) → 📸 **CAPTURA 20**
+1. Repositorio → **Settings → Advanced Security**.
+2. **Dependency graph** → *On*.
+3. **Dependabot alerts** → *On*.
+4. **Secret Protection** → **Enable** → confirmar **Enable Secret Protection**.
+5. No se activaron *Dependabot security updates* (PRs automáticos), porque la remediación se hace
+   de forma manual, ni *Push protection*, para no bloquear el trabajo de la pareja.
 
-| Funcionalidad | Alertas encontradas |
+![Secret Protection activado](img/07b-github-secret-protection-activado.jpg)
+
+**Estado final:** Dependabot alerts y Secret scanning aparecen como **Enabled**.
+
+![GitHub Security después de activar](img/07c-github-security-despues.jpg)
+
+**Resultados:**
+
+| Funcionalidad | Resultado |
 |---|---|
-| Dependabot alerts | [COMPLETAR] |
-| Secret scanning | [COMPLETAR] (se esperan alertas por `.npmrc`, `src/index.ts` y `credentials.yml`; ver sección 5) |
-| Code scanning (CodeQL) | [COMPLETAR] |
+| Dependabot alerts | **64 alertas abiertas**. Las más graves son 3 **críticas** de `handlebars` (inyección de JavaScript); le siguen altas de `flatted`, `tar` y `lodash`. |
+| Secret scanning | Al activarlo: 0 alertas. [COMPLETAR resultado final] |
+
+![Alertas de Dependabot](img/08a-dependabot-alertas.jpg)
+
+![Secret scanning](img/08b-secret-scanning-estado-inicial.jpg)
+
+> **¿Por qué secret scanning no marcó los secretos de inmediato?** GitHub detecta con más prioridad
+> los tokens con formato válido de proveedores conocidos. Los valores de ejemplo de `src/index.ts`
+> (por ejemplo `ghp_1234567890abcdef...`) no son tokens reales, y el escaneo del historial puede tardar.
+> Igual, los secretos sí fueron identificados en la revisión del código (sección 5).
 
 ### 4.5 Remediación
 
@@ -343,51 +361,50 @@ Security Hotspots, Code Smells, Coverage).
 
 | Campo | Detalle |
 |---|---|
-| Herramienta que lo detectó | [COMPLETAR: SonarCloud / Snyk / Dependabot] |
+| Herramienta que lo detectó | [COMPLETAR: Snyk / SonarCloud] |
 | Problema | [COMPLETAR] |
 | Archivo / dependencia | [COMPLETAR] |
 | Severidad | [COMPLETAR] |
 | Corrección aplicada | [COMPLETAR] |
-| Commit / PR | [COMPLETAR enlace] |
+| Commit | [COMPLETAR enlace] |
 
-📸 **CAPTURA 21:** el hallazgo **antes** de la corrección.
+![Hallazgo antes de la corrección](img/09a-remediacion-antes.jpg)
 
-📸 **CAPTURA 22:** el hallazgo **resuelto** después del nuevo análisis.
+![Hallazgo resuelto](img/09b-remediacion-despues.jpg)
 
-**Candidatas sugeridas:**
-- **Secretos en `src/index.ts`:** eliminar `apiKey` y `githubToken` *hardcodeados* y leerlos desde
-  `process.env`. Quitar la llamada automática `fetchData()` al importar el módulo.
-- **Dependencias críticas (`handlebars`, `tar`):** ejecutar `npm audit fix` y volver a correr las pruebas.
+**Opciones evaluadas:**
+- **Secretos en `src/index.ts`:** eliminar `apiKey` y `githubToken` escritos en el código, leerlos
+  desde variables de entorno (`process.env`) y quitar la llamada automática a `fetchData()`.
+- **Dependencia `chokidar` (Snyk):** actualizar de `2.0.3` a `3.x`, lo que corrige 6 vulnerabilidades altas.
+- **`credentials.yml`:** se elimina al final, como indicó la docente.
 
 ---
 
-## 5. Hallazgos de seguridad detectados manualmente
-
-Durante la revisión se identificaron estos problemas, que las herramientas anteriores deberían reportar:
+## 5. Hallazgos de seguridad detectados en el código
 
 | # | Archivo | Hallazgo | Riesgo |
 |---|---|---|---|
-| 5.1 | `src/index.ts` | `apiKey` y `githubToken` escritos en el código; la API key se envía en la URL; `fetch` se ejecuta al importar el módulo. | Exposición de credenciales; efecto secundario no controlado. |
-| 5.2 | `.npmrc` | Contiene un **token personal de GitHub** (`ghp_...`) en texto plano, versionado en el repo. | Cualquiera con acceso al repo puede usar el token. **Debe revocarse** y reemplazarse por `${NPM_TOKEN}`. |
-| 5.3 | `credentials.yml` | Archivo con credenciales versionado. | Exposición de credenciales (se mantiene por ahora para que lo detecte *secret scanning*). |
-| 5.4 | `src/quality/insecure-1-object.ts` | La entrada del usuario se interpola dentro de una plantilla **Pug** antes de compilarla. | *Server-Side Template Injection* (SSTI) → ejecución remota de código y XSS. |
-| 5.5 | `src/quality/insecure-2-object.ts` | Consulta SQL armada concatenando texto; HTML con entrada sin escapar; endpoint sin token CSRF; contraseñas en código y en logs. | SQL Injection, XSS, CSRF, exposición de credenciales. |
-| 5.6 | `src/quality/errores-object.ts` | Variables no usadas, tipo incorrecto (`string = 10`), métodos vacíos. | Calidad / mantenibilidad (*code smells*). |
+| 5.1 | `src/index.ts` | `apiKey` y `githubToken` escritos en el código. La API key viaja en la URL y `fetch` se ejecuta al importar el módulo. | Exposición de credenciales y efecto secundario no controlado. |
+| 5.2 | `.npmrc` | Contiene un token de GitHub (`ghp_...`) en texto plano dentro del repositorio. | Cualquiera con acceso al repo podría usarlo. Debe revocarse y reemplazarse por `${NPM_TOKEN}`. |
+| 5.3 | `credentials.yml` | Archivo con credenciales versionado. | Exposición de credenciales (se deja para el final, según la indicación de la docente). |
+| 5.4 | `src/quality/insecure-1-object.ts` | La entrada del usuario se inserta en una plantilla **Pug** antes de compilarla. | *Server-Side Template Injection* (SSTI) → ejecución remota de código y XSS. |
+| 5.5 | `src/quality/insecure-2-object.ts` | SQL armado concatenando texto, HTML sin escapar, endpoint sin token CSRF, contraseñas en el código y en los logs. | SQL Injection, XSS, CSRF y exposición de credenciales. |
+| 5.6 | `src/quality/errores-object.ts` | Variables sin usar, tipo incorrecto (`string = 10`) y métodos vacíos. | Calidad y mantenibilidad (*code smells*). |
 | 5.7 | `.github/workflows/pull_request.yml` | Usa Node 14 (sin soporte) y `actions/*@v2` (obsoletas). | Pipeline con componentes sin parches de seguridad. |
 
 ---
 
 ## 6. Conclusiones
 
-- Las **pruebas unitarias** ayudan a detectar errores temprano y evitan regresiones. Con 43% de
-  cobertura, más de la mitad del código podría romperse sin que ninguna prueba lo detecte.
+- Las **pruebas unitarias** detectan errores temprano y evitan regresiones. Con un 43 % de cobertura,
+  más de la mitad del código podría romperse sin que ninguna prueba lo detecte.
 - **npm audit, Snyk y Dependabot** atacan el mismo problema (dependencias vulnerables) desde distintos
-  puntos del ciclo de vida: en local, en la plataforma de seguridad y directamente en GitHub.
-- **SonarCloud y CodeQL** (análisis estático) detectan vulnerabilidades en el **código propio**,
-  por ejemplo SQL injection, SSTI y credenciales, antes de que lleguen a producción.
-- **Secret scanning y push protection** previenen uno de los incidentes más comunes: subir
-  contraseñas o tokens al repositorio.
-- Integrar estas herramientas en cada *pull request* convierte la calidad y la seguridad en un proceso
+  puntos del ciclo de vida: en el equipo local, en una plataforma de seguridad y directamente en GitHub.
+  Los tres coincidieron en hallazgos como `handlebars`, `tar`, `lodash` y `chokidar`.
+- **SonarCloud y CodeQL** (análisis estático) detectan vulnerabilidades en el **código propio**, como
+  SQL injection, SSTI o credenciales, antes de que lleguen a producción.
+- **Secret scanning** previene uno de los incidentes más comunes: subir contraseñas o tokens al repositorio.
+- Integrar estas herramientas en cada *Pull Request* convierte la calidad y la seguridad en un proceso
   **automático y continuo** (*DevSecOps*), en lugar de una revisión manual al final.
 
 [COMPLETAR: conclusión personal de la pareja]
@@ -398,10 +415,11 @@ Durante la revisión se identificaron estos problemas, que las herramientas ante
 
 | Archivo | Cambio |
 |---|---|
-| `scripts/run-tests.sh` | Nuevo: script de pruebas + cobertura + fallos + código no cubierto |
+| `scripts/run-tests.sh` | Nuevo: script de pruebas, cobertura, fallos y código no cubierto |
 | `package.json` | `test:coverage` ahora ejecuta `bash scripts/run-tests.sh` |
 | `.gitignore` | Se agrega `coverage` |
-| `sonar-project.properties` | Nuevo: configuración SonarCloud |
+| `sonar-project.properties` | Nuevo: configuración de SonarCloud |
 | `docs/npm-audit-report.txt` / `.json` | Nuevo: reporte completo de npm audit |
-| `docs/npm-audit-prod-report.txt` | Nuevo: reporte de npm audit solo producción |
+| `docs/npm-audit-prod-report.txt` | Nuevo: reporte de npm audit solo de producción |
+| `img/*.jpg` | Capturas de evidencia |
 | `DOCUMENTACION.md` | Nuevo: este documento |
