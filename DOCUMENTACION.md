@@ -8,7 +8,7 @@
 | Repositorio | https://github.com/grupo-4duoc/AUY1102-Pipeline |
 | Repositorio base (docente) | https://github.com/Fundacion-Instituto-Profesional-Duoc-UC/AUY1102-Pipeline |
 | Rama de trabajo | `feature/parcial2-simon` |
-| Integrantes | Simón Lagos · [COMPLETAR nombre pareja] |
+| Integrantes | Simón Lagos · NOMBRE PAREJA |
 | Fecha | 06-11-2026 |
 
 > Las imágenes están en la carpeta `img/` del repositorio.
@@ -368,7 +368,7 @@ propios** del proyecto: el Dockerfile y los workflows de GitHub Actions.
 | Funcionalidad | Resultado |
 |---|---|
 | Dependabot alerts | **64 alertas abiertas**. Las más graves son 3 **críticas** de `handlebars` (inyección de JavaScript); le siguen altas de `flatted`, `tar` y `lodash`. |
-| Secret scanning | Al activarlo: 0 alertas. [COMPLETAR resultado final] |
+| Secret scanning | **0 alertas.** GitHub solo alerta tokens con formato válido de proveedores conocidos; los secretos de este repo son de ejemplo o inactivos. SonarCloud sí los detectó (sección 4.3), lo que muestra que conviene usar varias herramientas. |
 
 ![Alertas de Dependabot](img/08a-dependabot-alertas.jpg)
 
@@ -382,6 +382,9 @@ propios** del proyecto: el Dockerfile y los workflows de GitHub Actions.
 ### 4.5 Remediación
 
 > Se debe aplicar **al menos una** remediación detectada por SonarCloud y/o Snyk.
+> En este trabajo se aplicaron **dos**: una de Snyk (dependencias) y una de SonarCloud (secretos).
+
+#### Remediación 1 – Actualización de `chokidar` (Snyk)
 
 | Campo | Detalle |
 |---|---|
@@ -392,7 +395,7 @@ propios** del proyecto: el Dockerfile y los workflows de GitHub Actions.
 | Corrección aplicada | Actualización de `chokidar` de `^2.0.3` a `^3.6.0` (última versión 3.x) |
 | Commit | `fix(deps): actualizar chokidar a 3.6.0` en la rama [`feature/parcial2-simon`](https://github.com/grupo-4duoc/AUY1102-Pipeline/commits/feature/parcial2-simon) |
 
-#### Paso 1 – Análisis de impacto
+##### Paso 1 – Análisis de impacto
 
 Antes de actualizar se verificó si el código usa `chokidar`:
 
@@ -413,7 +416,7 @@ npm ls chokidar
 `package.json`. Además, la versión `3.6.0` ya estaba en el proyecto (la usan `@babel/cli` y `ts-node-dev`).
 Por eso el cambio de versión mayor (2 → 3) tiene **bajo riesgo**.
 
-#### Paso 2 – Evidencia "antes"
+##### Paso 2 – Evidencia "antes"
 
 ```bash
 npm audit --omit=dev > docs/npm-audit-prod-ANTES.txt
@@ -434,7 +437,7 @@ yaml  1.0.0 - 1.10.2                 Severity: moderate
 
 Reporte completo: [`docs/npm-audit-prod-ANTES.txt`](docs/npm-audit-prod-ANTES.txt)
 
-#### Paso 3 – Corrección
+##### Paso 3 – Corrección
 
 ```bash
 npm install chokidar@^3.6.0
@@ -454,7 +457,7 @@ npm ls chokidar
   (`micromatch@3`, `braces@2`, `snapdragon`, `decode-uri-component`, etc.) y **no se agregó ninguno**.
   Esto reduce la superficie de ataque del proyecto.
 
-#### Paso 4 – Prueba de regresión
+##### Paso 4 – Prueba de regresión
 
 ```bash
 npm run test:coverage
@@ -473,7 +476,7 @@ Pruebas: 18 OK / 0 fallidas / 18 total
 
 Las **18 pruebas siguen pasando** y la cobertura no cambió: la actualización no introdujo regresiones.
 
-#### Paso 5 – Evidencia "después"
+##### Paso 5 – Evidencia "después"
 
 ```bash
 npm audit --omit=dev > docs/npm-audit-prod-DESPUES.txt
@@ -490,7 +493,7 @@ yaml  1.0.0 - 1.10.2                 Severity: moderate
 
 Reporte completo: [`docs/npm-audit-prod-DESPUES.txt`](docs/npm-audit-prod-DESPUES.txt)
 
-#### Resultado
+##### Resultado
 
 | Severidad (producción) | Antes | Después |
 |---|---:|---:|
@@ -519,10 +522,46 @@ Reporte completo: [`docs/npm-audit-prod-DESPUES.txt`](docs/npm-audit-prod-DESPUE
 - **`yaml` (pendiente):** **no estaba relacionada con chokidar**. Viene de `cosmiconfig@6` y también
   se corrige con `npm audit fix`.
 
+#### Remediación 2 – Eliminación de `credentials.yml` (SonarCloud)
+
+| Campo | Detalle |
+|---|---|
+| Herramienta que lo detectó | **SonarCloud** (ver sección 4.3) |
+| Problema | Credenciales escritas directamente en un archivo versionado (*hard-coded secret*, 2 hallazgos) |
+| Archivo | `credentials.yml` (raíz del repositorio) |
+| Severidad | **Blocker** (la máxima en SonarCloud) |
+| Corrección aplicada | Eliminación del archivo del repositorio con `git rm` |
+| Commit | `fix(security): eliminar credentials.yml` en la rama [`feature/parcial2-simon`](https://github.com/grupo-4duoc/AUY1102-Pipeline/commits/feature/parcial2-simon) |
+
+**Pasos realizados:**
+
+1. Verificar que ningún archivo del proyecto (código, pruebas, workflows o configuración) usa
+   `credentials.yml`, para que eliminarlo no rompa nada:
+   ```bash
+   grep -r "credentials" --exclude-dir=node_modules .   # sin referencias
+   ```
+2. Eliminar el archivo y registrar la eliminación en Git:
+   ```bash
+   git rm credentials.yml
+   git commit -m "fix(security): eliminar credentials.yml"
+   ```
+
+**Limitación importante, el historial de Git:** `git rm` borra el archivo **desde este commit en
+adelante**, pero el contenido **sigue existiendo en los commits anteriores**. Cualquiera puede verlo
+navegando el historial del repositorio o con `git log -p -- credentials.yml`. Por eso, en un caso real:
+
+1. **Revocar o rotar** inmediatamente las credenciales expuestas. Es el paso más importante: hay
+   que asumir que el secreto ya está comprometido.
+2. Opcionalmente, limpiar el historial con herramientas como `git filter-repo` o *BFG Repo-Cleaner*
+   (reescribe todos los commits y requiere coordinar al equipo).
+3. Guardar los secretos en un lugar seguro, como **GitHub Secrets** o un gestor de secretos, y activar
+   **Push protection** para bloquear futuros intentos de subir credenciales.
+
 **Otras remediaciones posibles (no aplicadas):**
 - **Secretos en `src/index.ts`:** eliminar `apiKey` y `githubToken` escritos en el código, leerlos
   desde variables de entorno (`process.env`) y quitar la llamada automática a `fetchData()`.
-- **`credentials.yml`:** se elimina al final, como indicó la docente.
+- **Token en `.npmrc`:** revocar el token y reemplazarlo por `${NPM_TOKEN}`.
+- **`picomatch` y `yaml`:** ejecutar `npm audit fix` para cerrar las 2 vulnerabilidades de producción restantes.
 
 ---
 
@@ -532,7 +571,7 @@ Reporte completo: [`docs/npm-audit-prod-DESPUES.txt`](docs/npm-audit-prod-DESPUE
 |---|---|---|---|
 | 5.1 | `src/index.ts` | `apiKey` y `githubToken` escritos en el código. La API key viaja en la URL y `fetch` se ejecuta al importar el módulo. | Exposición de credenciales y efecto secundario no controlado. |
 | 5.2 | `.npmrc` | Contiene un token de GitHub (`ghp_...`) en texto plano dentro del repositorio. | Cualquiera con acceso al repo podría usarlo. Debe revocarse y reemplazarse por `${NPM_TOKEN}`. |
-| 5.3 | `credentials.yml` | Archivo con credenciales versionado. | Exposición de credenciales (se deja para el final, según la indicación de la docente). |
+| 5.3 | `credentials.yml` | Archivo con credenciales versionado. | Exposición de credenciales. **Remediado:** archivo eliminado (ver 4.5, Remediación 2); sigue en el historial de Git. |
 | 5.4 | `src/quality/insecure-1-object.ts` | La entrada del usuario se inserta en una plantilla **Pug** antes de compilarla. | *Server-Side Template Injection* (SSTI) → ejecución remota de código y XSS. |
 | 5.5 | `src/quality/insecure-2-object.ts` | SQL armado concatenando texto, HTML sin escapar, endpoint sin token CSRF, contraseñas en el código y en los logs. | SQL Injection, XSS, CSRF y exposición de credenciales. |
 | 5.6 | `src/quality/errores-object.ts` | Variables sin usar, tipo incorrecto (`string = 10`) y métodos vacíos. | Calidad y mantenibilidad (*code smells*). |
@@ -553,7 +592,11 @@ Reporte completo: [`docs/npm-audit-prod-DESPUES.txt`](docs/npm-audit-prod-DESPUE
 - Integrar estas herramientas en cada *Pull Request* convierte la calidad y la seguridad en un proceso
   **automático y continuo** (*DevSecOps*), en lugar de una revisión manual al final.
 
-[COMPLETAR: conclusión personal de la pareja]
+**Conclusión personal:** con este trabajo nos dimos cuenta de que tener las pruebas en verde no significa
+que el proyecto esté bien: con 18 pruebas pasando igual teníamos menos de la mitad del código cubierto,
+secretos expuestos y dependencias vulnerables. También aprendimos que ninguna herramienta lo ve todo
+(Secret scanning no marcó los tokens, pero SonarCloud sí) y que después de cada corrección hay que volver
+a escanear y a correr las pruebas, porque arreglar una cosa puede traer otro problema, como nos pasó con `picomatch`.
 
 ---
 
@@ -565,6 +608,7 @@ Reporte completo: [`docs/npm-audit-prod-DESPUES.txt`](docs/npm-audit-prod-DESPUE
 | `package.json` | `test:coverage` ahora ejecuta `bash scripts/run-tests.sh`; `chokidar` actualizado a `^3.6.0` |
 | `package-lock.json` | Remediación: `chokidar@3.6.0` y eliminación de 134 paquetes obsoletos |
 | `docs/npm-audit-prod-ANTES.txt` / `-DESPUES.txt` | Evidencia de la remediación (npm audit de producción) |
+| `credentials.yml` | **Eliminado**: remediación del hallazgo *Blocker* de SonarCloud |
 | `.gitignore` | Se agrega `coverage` |
 | `sonar-project.properties` | Nuevo: configuración de SonarCloud |
 | `docs/npm-audit-report.txt` / `.json` | Nuevo: reporte completo de npm audit |
