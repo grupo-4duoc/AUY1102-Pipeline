@@ -43,7 +43,7 @@
     "prepublishOnly": "npm run build:ci",
     "sort": "sort-package-json package.json",
     "test:unit": "jest --passWithNoTests",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "bash scripts/run-tests.sh",
     "test:dev": "jest --verbose --colors --expand --maxWorkers=50% --detectOpenHandles --errorOnDeprecated --bail",
     "test:watch": "jest --watch --verbose --colors --expand --maxWorkers=25%",
     "types": "dts-bundle-generator --config dts-generator.json"
