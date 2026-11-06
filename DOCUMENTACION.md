@@ -28,6 +28,7 @@
    - 4.3 [SonarCloud](#43-sonarcloud)
    - 4.4 [GitHub Advanced Security](#44-github-advanced-security)
    - 4.5 [Remediación](#45-remediación)
+   - 4.6 [Integración a `master` y verificación de las remediaciones](#46-integración-a-master-y-verificación-de-las-remediaciones)
 5. [Hallazgos de seguridad detectados en el código](#5-hallazgos-de-seguridad-detectados-en-el-código)
 6. [Conclusiones](#6-conclusiones)
 7. [Distribución del trabajo](#7-distribución-del-trabajo)
@@ -708,6 +709,50 @@ navegando el historial del repositorio o con `git log -p -- credentials.yml`. Po
   desde variables de entorno (`process.env`) y quitar la llamada automática a `fetchData()`.
 - **Token en `.npmrc`:** revocar el token y reemplazarlo por `${NPM_TOKEN}`.
 - **`picomatch` y `yaml`:** ejecutar `npm audit fix` para cerrar las 2 vulnerabilidades de producción restantes.
+
+### 4.6 Integración a `master` y verificación de las remediaciones
+
+**1. Pull Request y merge.** El trabajo se integró a la rama principal con el **Pull Request #5**
+(`feature/parcial2-simon` → `master`). Ese PR incluye el commit de Abraham Ravelo de la rama
+`feature/pruebas-unitarias`, así que su **PR #4 también quedó como *Merged***. No hubo conflictos con `master`.
+
+> En el PR fallaron **3 de 5 *checks***: `test` y `lint`, que vienen del workflow original
+> `pull_request.yml` (usa Node 14 y `actions/*@v2`, versiones obsoletas; ver hallazgo 5.7), y
+> `SonarCloud Code Analysis`, que corresponde al *Quality Gate* de SonarCloud sobre el código del PR.
+> Los análisis de **CodeQL** pasaron. Los *checks* fallidos no impidieron el merge.
+
+![PR #5 integrado a master](img/10a-pr5-merge-master.jpg)
+
+**2. SonarCloud volvió a analizar `master` automáticamente:**
+
+| Métrica | Antes | Después |
+|---|---|---|
+| Quality Gate | *Not computed* | **Passed** ✔ |
+| Hallazgos *Blocker* de `credentials.yml` | 2 abiertos | **2 *Fixed*** ✔ |
+| Dependency risks | 125 | 120 |
+
+Los dos hallazgos de `credentials.yml` aparecen con estado **Fixed**. Esto confirma la
+**Remediación 2**, que fue detectada por SonarCloud.
+
+![Hallazgos de credentials.yml corregidos en SonarCloud](img/10b-sonarcloud-credentials-fixed.jpg)
+
+**3. Snyk: nuevo escaneo (*Retest now*) de `package.json` en `master`:**
+
+| | Antes | Después |
+|---|---:|---:|
+| Vulnerabilidades (issues) | 7 | **4** |
+| Altas | 4 | **2** |
+| Medias | 3 | 2 |
+| Dependencias analizadas | 133 | **40** |
+
+La actualización de `chokidar` a 3.6.0 (**Remediación 1**, detectada por Snyk) eliminó las
+vulnerabilidades de `chokidar@2.0.3` y sacó del proyecto 93 dependencias obsoletas. Las 4 que quedan
+vienen de dependencias transitivas de `chokidar@3.6.0` (3 *issues*, por ejemplo `picomatch`) y de
+`cosmiconfig` (`yaml`). Snyk marca solo 1 de las de `chokidar` como corregible y 2 **sin corrección
+disponible por ahora**. `npm audit fix` puede resolver parte de ellas (`picomatch`, `yaml`) en una
+siguiente iteración.
+
+![Snyk después de la remediación](img/10c-snyk-despues-retest.jpg)
 
 ---
 
